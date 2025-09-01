@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>微信登录集成示例</title>
+		<style>
+			body {
+				font-family: sans-serif;
+				padding: 20px;
+			}
+			button {
+				font-size: 16px;
+				padding: 10px 20px;
+				cursor: pointer;
+			}
+			#userInfo {
+				margin-top: 20px;
+				font-size: 18px;
+				color: green;
+			}
+			#errorInfo {
+				margin-top: 20px;
+				font-size: 18px;
+				color: red;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>我的网站</h1>
+		<p>这是一个需要集成微信登录功能的示例网站。</p>
+
+		<button id="loginBtn">点击这里，使用微信登录</button>
+
+		<div id="userInfo"></div>
+		<div id="errorInfo"></div>
+
+		<script>
+			// ===================================================================================
+			// 集成 wx_login 服务的核心逻辑
+			// ===================================================================================
+
+			// 1. 配置你的 wx_login 服务地址
+			//    部署后，你需要将下面的 URL 替换为你的 Cloudflare Worker 的实际 URL
+			const WX_LOGIN_SERVICE_URL = 'https://wx-login.your-worker-domain.workers.dev';
+
+			const loginBtn = document.getElementById('loginBtn');
+			const userInfoDiv = document.getElementById('userInfo');
+			const errorInfoDiv = document.getElementById('errorInfo');
+
+			let loginWindow = null; // 用于持有对弹窗的引用
+
+			// 2. 点击登录按钮时，打开登录弹窗
+			loginBtn.addEventListener('click', () => {
+				// 清理之前的状态
+				userInfoDiv.textContent = '';
+				errorInfoDiv.textContent = '';
+
+				const loginUrl = `${WX_LOGIN_SERVICE_URL}/login`;
+
+				// 我们打开一个固定大小的窗口，让体验更好
+				const width = 400;
+				const height = 550;
+				const left = window.screen.width / 2 - width / 2;
+				const top = window.screen.height / 2 - height / 2;
+
+				loginWindow = window.open(loginUrl, 'wx_login_window', `width=${width},height=${height},top=${top},left=${left}`);
+
+				// （可选）可以加一个定时器，检查弹窗是否被用户手动关闭了
+				const checkWindow = setInterval(() => {
+					if (loginWindow && loginWindow.closed) {
+						clearInterval(checkWindow);
+						// 如果弹窗关闭了但我们还没收到成功消息，可以认为用户取消了
+						if (!userInfoDiv.textContent) {
+							errorInfoDiv.textContent = '用户取消了登录。';
+						}
+					}
+				}, 1000);
+			});
+
+			// 3. 监听来自弹窗的消息 (postMessage)
+			//    这是实现跨窗口通信的关键
+			window.addEventListener(
+				'message',
+				(event) => {
+					// 安全性检查：确保消息来自我们的登录服务
+					// 注意：在生产环境中，最好验证 event.origin 是否与 WX_LOGIN_SERVICE_URL 匹配
+					if (event.origin !== new URL(WX_LOGIN_SERVICE_URL).origin) {
+						// console.warn("Received message from untrusted origin:", event.origin);
+						// return;
+					}
+
+					const data = event.data;
+
+					// 检查收到的消息类型
+					if (data && data.type === 'wx-login-success') {
+						// 登录成功！
+						console.log('登录成功，收到的用户 UID:', data.uid);
+						userInfoDiv.textContent = `登录成功！您的微信用户 ID 是: ${data.uid}`;
+
+						// 关闭弹窗（如果它还没自己关闭的话）
+						if (loginWindow) {
+							loginWindow.close();
+						}
+					} else if (data && data.type === 'wx-login-cancel') {
+						// 这个消息是我们在弹窗的 beforeunload 事件中发送的
+						console.log('用户关闭了登录窗口。');
+						errorInfoDiv.textContent = '用户取消了登录。';
+					}
+				},
+				false
+			);
+		</script>
+	</body>
+</html>

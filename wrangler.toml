@@ -1,0 +1,17 @@
+name = "wx-login"
+main = "src/index.js"
+compatibility_date = "2023-10-30"
+
+# 绑定 Durable Object 类，使其可用
+durable_objects.bindings = [
+  { name = "WX_LOGIN_DO", class_name = "WxLoginDurableObject" }
+]
+
+# 环境变量，用于配置微信公众号信息
+# 注意：AppSecret 等敏感信息建议使用 wrangler secret put 命令设置
+# 例如: wrangler secret put AppSecret
+[vars]
+AppID = "your-app-id"          # 微信公众号的 AppID
+AppToken = "your-app-token"      # 微信后台设置的 Token
+TicketPrefix = "wxlogin_"      # 凭证前缀，可自定义
+AuthExpireSecs = 300           # 二维码有效期（秒）

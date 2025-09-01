@@ -1,0 +1,16 @@
+{
+	"name": "wx_login",
+	"version": "1.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev"
+	},
+	"devDependencies": {
+		"wrangler": "^3.0.0"
+	},
+	"dependencies": {
+		"fast-xml-parser": "^4.2.5",
+		"qrcode-svg": "^1.1.0"
+	}
+}
